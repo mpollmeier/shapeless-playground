@@ -3,52 +3,30 @@ import shapeless.poly._
 import shapeless.ops.hlist._
 import shapeless.UnaryTCConstraint._
 
-object Util {
-  case class Label[A](name: String, value: A)
-
-  object GetLabelName extends (Label ~> Const[String]#λ) {
-    def apply[A](label: Label[A]) = label.name
-  }
-}
-
 object Main extends App {
-  import Util._
+  case class Label[A](name: String)
+  case class LabelWithValue[A](label: Label[A], value: A)
 
-  val label = Label("a", 5)
-  val label2 = Label("b", "someString")
-  // val labelName = GetLabelName(label)
-  // val s: String = labelName
-  // println(labelName)
-
-  val labels = label :: label2 :: HNil
-  println(labelNames(labels))
-  // val names = labels map GetLabelName
-  // println(names)
-
-
-
-  def compiles = {
-    val names = "a" :: "b" :: HNil
-    bar(names.toList)
+  var horribleGlobalState: Map[String, Any] = _
+  object GetLabelWithValue extends Poly1 {
+    implicit def caseLabel[A] = at[Label[A]] { label ⇒
+      // TODO: avoid the horrible global state - pass in the Map as a parameter
+      LabelWithValue(label, horribleGlobalState.get(label.name).asInstanceOf[A])
+    }
   }
 
-  def bar(l: List[String]) = l
+  val label1 = Label[Int]("a")
+  val label2 = Label[String]("b")
+  val labels = label1 :: label2 :: HNil
+  val labelsWithValues: LabelWithValue[Int] :: LabelWithValue[String] :: HNil = getValues(labels)
+  println(labelsWithValues)
 
-  def labelNames[L <: HList : *->*[Label]#λ, M <: HList](labels: L)(
-    implicit mapper: Mapper.Aux[GetLabelName.type, L, M],
-    trav: ToTraversable.Aux[M, List, String]): List[String] =
-    bar(labels.map(GetLabelName).toList)
+  def getValues[L <: HList : *->*[Label]#λ, M <: HList](labels: L)(
+    implicit mapper: Mapper.Aux[GetLabelWithValue.type, L, M]) = {
 
-  // A is an HList whose members are all Label[_]
-  def doesNotCompile[A <: HList : *->*[Label]#λ](labels: A)(
-    implicit ev1: Mapper[GetLabelName.type, A]) = {
-  // implicit ev1: Mapper[String, A]) = {
-
-    val names = labels map GetLabelName
-    // names is of type `ev1.Out` - I want it to be an HList of Strings
-
-    // bar(names.toList)
-    // error: could not find implicit value for parameter toTraversableAux:
-    // shapeless.ops.hlist.ToTraversable.Aux[ev1.Out,List,Lub]
+    // simplified - imagine we get the content of the map from a database
+    horribleGlobalState = Map("a" -> 5, "b" -> "five")
+    // val a: Int =
+    labels map GetLabelWithValue
   }
 }
