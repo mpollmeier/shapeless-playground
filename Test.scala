@@ -10,7 +10,7 @@ object Main extends App {
   object combineLabelWithValue extends Poly2 {
     implicit def atLabel[A, B <: HList] = at[Label[A], (B, Map[String, Any])] {
       case (label, (acc, values)) ⇒
-        (LabelWithValue(label, values.get(label.name).asInstanceOf[A]) :: acc, values)
+        (LabelWithValue(label, values(label.name).asInstanceOf[A]) :: acc, values)
     }
   }
 
@@ -19,20 +19,32 @@ object Main extends App {
   }
 
   val label1 = Label[Int]("a")
-  val label2 = Label[String]("b")
-  val labels = label1 :: label2 :: HNil
+  val labels = label1 :: HNil
 
-  val labelsWithValues: LabelWithValue[Int] :: LabelWithValue[String] :: HNil = getValues(labels)
-  val values = labelsWithValues.map(GetLabelValue)
-  // val values: Int :: String :: HNil = getValues(labels)
+  val labelsWithValues: LabelWithValue[Int] :: HNil = getLabelWithValues(labels)
+  val values: Int :: HNil = labelsWithValues.map(GetLabelValue)
   println(values)
 
-  def getValues[L <: HList, P, WithValue, Value](labels: L)(
+  def getLabelWithValues[L <: HList, P, WithValues](labels: L)(
     implicit folder: RightFolder.Aux[L, (HNil.type, Map[String, Any]), combineLabelWithValue.type, P],
-    ic: IsComposite.Aux[P, WithValue, _]
-    ): WithValue = {
+    ic: IsComposite.Aux[P, WithValues, _]
+  ): WithValues = {
     val state = Map("a" -> 5, "b" -> "five")
     val resultTuple = labels.foldRight((HNil, state))(combineLabelWithValue)
     ic.head(resultTuple)
+  }
+
+  val values2: Int :: HNil = getValues(labels)
+  println(values2)
+
+  def getValues[L <: HList, P, WithValues <: HList, Values <: HList](labels: L)(
+    implicit folder: RightFolder.Aux[L, (HNil.type, Map[String, Any]), combineLabelWithValue.type, P],
+    ic: IsComposite.Aux[P, WithValues, _],
+    mapper: Mapper.Aux[GetLabelValue.type, WithValues, Values]
+  ): Values = {
+    val state = Map("a" -> 5, "b" -> "five")
+    val resultTuple = labels.foldRight((HNil, state))(combineLabelWithValue)
+    val withValues: WithValues = ic.head(resultTuple)
+    withValues.map(GetLabelValue)
   }
 }
