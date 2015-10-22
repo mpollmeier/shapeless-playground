@@ -7,6 +7,9 @@ object Main extends App {
   case class Label[A](name: String)
   case class LabelWithValue[A](label: Label[A], value: A)
 
+  val label1 = Label[Int]("a")
+  val labels = label1 :: HNil
+
   object combineLabelWithValue extends Poly2 {
     implicit def atLabel[A, B <: HList] = at[Label[A], (B, Map[String, Any])] {
       case (label, (acc, values)) ⇒
@@ -18,12 +21,12 @@ object Main extends App {
     def apply[B](labelWithValue: LabelWithValue[B]) = labelWithValue.value
   }
 
-  val label1 = Label[Int]("a")
-  val labels = label1 :: HNil
-
   val labelsWithValues: LabelWithValue[Int] :: HNil = getLabelWithValues(labels)
+  // manually mapping it works fine:
   val values: Int :: HNil = labelsWithValues.map(GetLabelValue)
-  println(values)
+
+  // error: could not find implicit value for parameter mapper: shapeless.ops.hlist.Mapper.Aux[Main.GetLabelValue.type,WithValues,Values]
+  val values2: Int :: HNil = getValues(labels)
 
   def getLabelWithValues[L <: HList, P, WithValues](labels: L)(
     implicit folder: RightFolder.Aux[L, (HNil.type, Map[String, Any]), combineLabelWithValue.type, P],
@@ -33,9 +36,6 @@ object Main extends App {
     val resultTuple = labels.foldRight((HNil, state))(combineLabelWithValue)
     ic.head(resultTuple)
   }
-
-  val values2: Int :: HNil = getValues(labels)
-  println(values2)
 
   def getValues[L <: HList, P, WithValues <: HList, Values <: HList](labels: L)(
     implicit folder: RightFolder.Aux[L, (HNil.type, Map[String, Any]), combineLabelWithValue.type, P],
