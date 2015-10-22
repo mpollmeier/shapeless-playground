@@ -1,4 +1,5 @@
 import shapeless._
+import shapeless.poly._
 import shapeless.ops.hlist._
 import shapeless.ops.tuple.IsComposite
 
@@ -13,17 +14,23 @@ object Main extends App {
     }
   }
 
+  object GetLabelValue extends (LabelWithValue ~> Id) {
+    def apply[B](labelWithValue: LabelWithValue[B]) = labelWithValue.value
+  }
+
   val label1 = Label[Int]("a")
   val label2 = Label[String]("b")
   val labels = label1 :: label2 :: HNil
 
   val labelsWithValues: LabelWithValue[Int] :: LabelWithValue[String] :: HNil = getValues(labels)
-  println(labelsWithValues)
+  val values = labelsWithValues.map(GetLabelValue)
+  // val values: Int :: String :: HNil = getValues(labels)
+  println(values)
 
-  def getValues[L <: HList, Out, P](labels: L)(
+  def getValues[L <: HList, P, WithValue, Value](labels: L)(
     implicit folder: RightFolder.Aux[L, (HNil.type, Map[String, Any]), combineLabelWithValue.type, P],
-    ic: IsComposite.Aux[P, Out, _]
-    ): Out = {
+    ic: IsComposite.Aux[P, WithValue, _]
+    ): WithValue = {
     val state = Map("a" -> 5, "b" -> "five")
     val resultTuple = labels.foldRight((HNil, state))(combineLabelWithValue)
     ic.head(resultTuple)
