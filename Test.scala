@@ -23,10 +23,14 @@ object Main extends App {
 
   val labelsWithValues: LabelWithValue[Int] :: HNil = getLabelWithValues(labels)
   // manually mapping it works fine:
-  val values: Int :: HNil = labelsWithValues.map(GetLabelValue)
+  val valuesManual: Int :: HNil = labelsWithValues.map(GetLabelValue)
+
+  // using a second function with Mapper works fine:
+  val valuesSecondFn: Int :: HNil = getValues(labelsWithValues)
 
   // error: could not find implicit value for parameter mapper: shapeless.ops.hlist.Mapper.Aux[Main.GetLabelValue.type,WithValues,Values]
-  val values2: Int :: HNil = getValues(labels)
+  // val valuesFull: Int :: HNil = getValuesFull(labels)
+
 
   def getLabelWithValues[L <: HList, P, WithValues](labels: L)(
     implicit folder: RightFolder.Aux[L, (HNil.type, Map[String, Any]), combineLabelWithValue.type, P],
@@ -37,7 +41,13 @@ object Main extends App {
     ic.head(resultTuple)
   }
 
-  def getValues[L <: HList, P, WithValues <: HList, Values <: HList](labels: L)(
+  def getValues[WithValues <: HList, Values <: HList](withValues: WithValues)(
+    implicit mapper: Mapper.Aux[GetLabelValue.type, WithValues, Values]
+  ): Values = {
+    withValues.map(GetLabelValue)
+  }
+
+  def getValuesFull[L <: HList, P, WithValues <: HList, Values <: HList](labels: L)(
     implicit folder: RightFolder.Aux[L, (HNil.type, Map[String, Any]), combineLabelWithValue.type, P],
     ic: IsComposite.Aux[P, WithValues, _],
     mapper: Mapper.Aux[GetLabelValue.type, WithValues, Values]
