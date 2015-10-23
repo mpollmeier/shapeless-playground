@@ -27,4 +27,13 @@ object Main extends App {
     ic.head(resultTuple)
   }
 
+
+  // callWithSized(HNil)
+  // callWithSized(5 :: HNil)
+  callWithSized(5 :: "five" :: HNil)
+  def callWithSized[L <: HList](l: L)(implicit ev: Sized[L, Nat._2]) =
+    6
+
+  // def callWithSized[L <: HList :IsHCons](l: L) = 6
+
 }
