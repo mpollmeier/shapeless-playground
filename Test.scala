@@ -28,10 +28,11 @@ object Main extends App {
   }
 
 
+  // witness that an hlist has exactly length 2
   // callWithSized(HNil)
   // callWithSized(5 :: HNil)
   callWithSized(5 :: "five" :: HNil)
-  def callWithSized[L <: HList](l: L)(implicit ev: Sized[L, Nat._2]) =
+  def callWithSized[L <: HList](l: L)(implicit ev: Length.Aux[L, Nat._2]) =
     6
 
   // def callWithSized[L <: HList :IsHCons](l: L) = 6
