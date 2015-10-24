@@ -52,7 +52,7 @@ object Main extends App {
     val rightFoldWithMapped: Int :: HNil = rightFoldWithMapped(labels)
     println(rightFoldWithMapped)
 
-    def rightFoldWithMapped[L <: HList, P, WithValues <: HList, Values <: HList](labels: L)(
+    def rightFoldWithMapped[L <: HList, P <: Product2[_, _], WithValues <: HList, Values <: HList](labels: L)(
       implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), combineLabelWithValue.type, P],
       ic: IsComposite.Aux[P, WithValues, _],
       mapper: Mapper.Aux[GetLabelValue.type, WithValues, Values]
@@ -64,5 +64,45 @@ object Main extends App {
     }
   }
 
-  val test = RightFoldWithMappedTest
+  object DestructureTupleTest {
+    case class Label[A](name: String)
+
+    val label1 = Label[Int]("a")
+    val labels = label1 :: HNil
+
+    object getValue extends Poly2 {
+      implicit def atLabel[A, B <: HList] = at[Label[A], (B, Map[String, Any])] {
+        case (label, (acc, values)) ⇒
+          (values(label.name).asInstanceOf[A] :: acc, values)
+      }
+    }
+
+    // compiles fine
+    val untupled1: Int :: HNil = rightFoldUntupled1(labels)
+
+    // [error] could not find implicit value for parameter folder:
+    // shapeless.ops.hlist.RightFolder.Aux[shapeless.::[Main.DestructureTupleTest.Label[Int],shapeless.HNil],
+    //(shapeless.HNil, Map[String,Any]),Main.DestructureTupleTest.getValue.type,P]
+    val untupled2: Int :: HNil = rightFoldUntupled2(labels)
+
+    def rightFoldUntupled1[L <: HList, P <: Product2[_, _], Values <: HList](labels: L)(
+      implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, P],
+      ic: IsComposite.Aux[P, Values, _]
+    ): Values = {
+      val state = Map("a" -> 5, "b" -> "five")
+      val resultTuple = labels.foldRight((HNil: HNil, state))(getValue)
+      ic.head(resultTuple)
+    }
+
+    def rightFoldUntupled2[L <: HList, Values, P <: Product2[_, Values]](labels: L)(
+      implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, P]
+    ): Values = {
+      val state = Map("a" -> 5, "b" -> "five")
+      val resultTuple = labels.foldRight((HNil: HNil, state))(getValue)
+      resultTuple._2
+    }
+  }
+
+  // val test4 = RightFoldWithMappedTest
+  val test5 = DestructureTupleTest
 }
