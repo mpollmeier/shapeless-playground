@@ -74,6 +74,7 @@ object Main extends App {
   // val rightFoldWithMapped = RightFoldWithMappedTest
 
   object DestructureTupleTest {
+    // http://stackoverflow.com/questions/33313164/shapeless-deconstruct-tuple-in-type-parameter-declaration/33313994
     case class Label[A](name: String)
 
     val label1 = Label[Int]("a")
@@ -86,13 +87,8 @@ object Main extends App {
       }
     }
 
-    // compiles fine
     val untupled1: Int :: HNil = rightFoldUntupled1(labels)
-
-    // [error] could not find implicit value for parameter folder:
-    // shapeless.ops.hlist.RightFolder.Aux[shapeless.::[Main.DestructureTupleTest.Label[Int],shapeless.HNil],
-    //(shapeless.HNil, Map[String,Any]),Main.DestructureTupleTest.getValue.type,P]
-    // val untupled2: Int :: HNil = rightFoldUntupled2(labels)
+    val untupled2: Int :: HNil = rightFoldUntupled2(labels)
 
     def rightFoldUntupled1[L <: HList, P <: Product2[_, _], Values <: HList](labels: L)(
       implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, P],
@@ -103,13 +99,14 @@ object Main extends App {
       ic.head(resultTuple)
     }
 
-    def rightFoldUntupled2[L <: HList, Values, P <: Product2[_, Values]](labels: L)(
-      implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, P]
+    def rightFoldUntupled2[L <: HList, Values, M](labels: L)(
+      implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, (Values, M)]
     ): Values = {
       val state = Map("a" -> 5, "b" -> "five")
       val resultTuple = labels.foldRight((HNil: HNil, state))(getValue)
-      resultTuple._2
+      resultTuple._1
     }
   }
-  val destructureTupleTest = DestructureTupleTest
+  // val destructureTupleTest = DestructureTupleTest
+
 }
