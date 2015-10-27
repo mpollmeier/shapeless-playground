@@ -109,4 +109,35 @@ object Main extends App {
   }
   // val destructureTupleTest = DestructureTupleTest
 
+  object FoldToTupleTest {
+    case class Label[A](name: String)
+
+    val label1 = Label[Int]("a")
+    val label2 = Label[String]("b")
+    val labels = label1 :: label2 :: HNil
+
+    object getValue extends Poly2 {
+      implicit def atLabel[A, B <: HList] = at[Label[A], (B, Map[String, Any])] {
+        case (label, (acc, values)) ⇒
+          (values(label.name).asInstanceOf[A] :: acc, values)
+      }
+    }
+
+    val tuple: (Int, String) = foldToTuple(labels)
+
+    def foldToTuple[
+      L <: HList,
+      Values <: HList, Z,
+      ValuesTuple](labels: L)(
+      implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, (Values, Z)],
+      tupler: Tupler.Aux[Values, ValuesTuple]
+    ): ValuesTuple = {
+      val state = Map("a" -> 5, "b" -> "five")
+      val resultTuple = labels.foldRight((HNil: HNil, state))(getValue)
+      val values: Values = resultTuple._1
+      tupler(values)
+    }
+  }
+  val foldToTupleTest = FoldToTupleTest
+
 }
