@@ -2,7 +2,8 @@ import shapeless._
 import shapeless.poly._
 import shapeless.ops.hlist._
 import shapeless.ops.tuple.IsComposite
-import shapeless.ops.product._
+// import shapeless.ops.product._
+import shapeless.UnaryTCConstraint.*->*
 
 object Main extends App {
   object SizeTest {
@@ -116,6 +117,10 @@ object Main extends App {
     val label2 = Label[String]("b")
     val labels = label1 :: label2 :: HNil
 
+    object GetLabelName extends (Label ~>> String) {
+      def apply[B](label: Label[B]) = label.name
+    }
+
     object getValue extends Poly2 {
       implicit def atLabel[A, B <: HList] = at[Label[A], (B, Map[String, Any])] {
         case (label, (acc, values)) ⇒
@@ -126,12 +131,18 @@ object Main extends App {
     val tuple: (Int, String) = foldToTuple(labels)
 
     def foldToTuple[
-      L <: HList,
-      Values <: HList, Z,
-      ValuesTuple](labels: L)(
-      implicit folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, (Values, Z)],
-      tupler: Tupler.Aux[Values, ValuesTuple]
-    ): ValuesTuple = {
+      L <: HList: *->*[Label]#λ,
+      LabelNames <: HList,
+      H0, T0 <: HList,
+      Values <: HList, Z, ValuesTuples](labels: L)(
+      implicit hasOne: IsHCons.Aux[L, H0, T0], hasTwo: IsHCons[T0], // witnesses that stepLabels has > 1 elements
+      labelToString: Mapper.Aux[GetLabelName.type, L, LabelNames],
+      trav: ToTraversable.Aux[LabelNames, List, String],
+      folder: RightFolder.Aux[L, (HNil, Map[String, Any]), getValue.type, (Values, Z)],
+      tupler: Tupler.Aux[Values, ValuesTuples]
+    ): ValuesTuples = {
+      val mapped: LabelNames = labels.map(GetLabelName)
+      val stringLabels: List[String] = mapped.toList
       val state = Map("a" -> 5, "b" -> "five")
       val resultTuple = labels.foldRight((HNil: HNil, state))(getValue)
       val values: Values = resultTuple._1
