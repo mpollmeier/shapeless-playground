@@ -2,7 +2,6 @@ import shapeless._
 import shapeless.poly._
 import shapeless.ops.hlist._
 import shapeless.ops.tuple.IsComposite
-// import shapeless.ops.product._
 import shapeless.UnaryTCConstraint.*->*
 
 object Main extends App {
@@ -37,7 +36,7 @@ object Main extends App {
       implicit tupler: Tupler[L]
     ) : tupler.Out = tupler(l)
   }
-  val tupleTest = TupleTest
+  // val tupleTest = TupleTest
 
 
   object RightFoldWithMappedTest {
@@ -150,5 +149,16 @@ object Main extends App {
     }
   }
   val foldToTupleTest = FoldToTupleTest
+
+  object TupleInputTest {
+    import shapeless.syntax.std.product._
+    val tuple = (1, "one")
+    val hlist: Int :: String :: HNil = tupleToHList(tuple)
+
+    def tupleToHList[P <: Product, L <: HList](p: P)(
+      implicit conv: shapeless.ops.product.ToHList.Aux[P,L]): L =
+      p.toHList
+  }
+  val tupleInputTest = TupleInputTest
 
 }
