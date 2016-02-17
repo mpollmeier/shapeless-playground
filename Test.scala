@@ -161,4 +161,37 @@ object Main extends App {
   }
   val tupleInputTest = TupleInputTest
 
+  object TupleToHListThenMapReturnTuple {
+    import shapeless.syntax.std.product._
+    import shapeless.ops.product.ToHList
+    import shapeless.poly._
+
+    object TypeMangler extends Poly1 {
+      implicit def caseInt = at[Int](_ => "now it's a string")
+      implicit def caseString = at[String](_.length)
+    }
+
+    def composeAll
+      [TupleT <: Product,
+      TupleAsHList <: HList,
+      H0, T0 <: HList,
+      MangledTupleAsHList <: HList,
+      MangledTuple <: Product]
+      (tuple: TupleT)
+      (implicit toHList: ToHList.Aux[TupleT,TupleAsHList],
+       hasOne: IsHCons.Aux[TupleAsHList, H0, T0],
+       hasTwo: IsHCons[T0],
+       typeMangler: Mapper.Aux[TypeMangler.type, TupleAsHList, MangledTupleAsHList],
+       tupler: Tupler.Aux[MangledTupleAsHList, MangledTuple]
+      ) = {
+      val hlist: TupleAsHList = toHList(tuple)
+      val mangledTupleAsHList = hlist map TypeMangler
+      tupler(mangledTupleAsHList)
+    }
+
+    // def doesNotCompile = composeAll(Tuple1(5))
+    def compiles: (String, Int) = composeAll((5, "five"))
+  }
+  val tupleToHListThenMapReturnTuple = TupleToHListThenMapReturnTuple
+
 }
