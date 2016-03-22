@@ -194,4 +194,27 @@ object Main extends App {
   }
   val tupleToHListThenMapReturnTuple = TupleToHListThenMapReturnTuple
 
+  object SerialiseTest {
+    import shapeless._
+    // import shapeless.labelled.{ FieldType, field }
+
+    case class Address(street: String, zip: Int)
+    case class Person(name: String, address: Address)
+
+    val person = Person("Jane", Address("street address", 12345))
+
+    // type ShallowPersonRec =
+    //   FieldType[Witness.`'name`.T, String] ::
+    //   FieldType[Witness.`'address`.T, Address] :: HNil
+    def shallowRec[A](a: A)(implicit gen: LabelledGeneric[A]): gen.Repr = gen.to(a)
+    // val shallow: ShallowPersonRec = LabelledGeneric[Person].to(person)
+
+    // val shallow: ShallowPersonRec = shallowRec(person)
+    val shallow = shallowRec(person)
+
+    val originalPerson: Person = LabelledGeneric[Person].from(shallow)
+    // originalPerson: Person = Person(Jane,Address(street address,12345))
+  }
+  val serialiseTest = SerialiseTest
+
 }
