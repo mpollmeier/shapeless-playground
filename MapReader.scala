@@ -1,40 +1,40 @@
 import shapeless._
 
-// stolen from echojc: https://raw.githubusercontent.com/echojc/sdu16/f5e33fe2bf08527c6663b976d85e727a5f0cae34/shapeless-gen/src/main/scala/MapReader.scala
+// based on https://github.com/echojc/sdu16/blob/f5e33fe2bf08527c6663b976d85e727a5f0cae34/shapeless-gen/src/main/scala/MapReader.scala
 
 trait MapReader[T] {
   type K
-  def read(map: Map[Any, Any]): T
+  def read(map: Map[Symbol, Any]): T
 }
 
 object MapReader {
   type Aux[T, K0] = MapReader[T] { type K = K0 }
 
-  implicit def mrInt[K0](implicit wk: Witness.Aux[K0]): MapReader.Aux[Int, K0] =
+  implicit def mrInt[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReader.Aux[Int, K0] =
     new MapReader[Int] {
       type K = K0
-      def read(map: Map[Any, Any]): Int =
+      def read(map: Map[Symbol, Any]): Int =
         map(wk.value).asInstanceOf[Int]
     }
 
-  implicit def mrString[K0](implicit wk: Witness.Aux[K0]): MapReader.Aux[String, K0] =
+  implicit def mrString[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReader.Aux[String, K0] =
     new MapReader[String] {
       type K = K0
-      def read(map: Map[Any, Any]): String =
+      def read(map: Map[Symbol, Any]): String =
         map(wk.value).asInstanceOf[String]
     }
 
-  implicit def mrBoolean[K0](implicit wk: Witness.Aux[K0]): MapReader.Aux[Boolean, K0] =
+  implicit def mrBoolean[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReader.Aux[Boolean, K0] =
     new MapReader[Boolean] {
       type K = K0
-      def read(map: Map[Any, Any]): Boolean =
+      def read(map: Map[Symbol, Any]): Boolean =
         map(wk.value).asInstanceOf[Boolean]
     }
 
   implicit val mrHNil: MapReader.Aux[HNil, HNil] =
     new MapReader[HNil] {
       type K = HNil
-      def read(map: Map[Any, Any]): HNil = HNil
+      def read(map: Map[Symbol, Any]): HNil = HNil
     }
 
   implicit def mrHCons[K0, J <: HList, H, T <: HList](implicit
@@ -43,7 +43,7 @@ object MapReader {
   ): MapReader.Aux[H :: T, K0 :: J] =
     new MapReader[H :: T] {
       type K = K0 :: J
-      def read(map: Map[Any, Any]): H :: T =
+      def read(map: Map[Symbol, Any]): H :: T =
         mrH.read(map) :: mrT.read(map)
     }
 
@@ -54,7 +54,7 @@ object MapReader {
   ): MapReader.Aux[A, K0] =
     new MapReader[A] {
       type K = K0
-      def read(map: Map[Any, Any]): A =
+      def read(map: Map[Symbol, Any]): A =
         gen.from(mr.read(map))
     }
 }
