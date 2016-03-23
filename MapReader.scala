@@ -4,7 +4,7 @@ import shapeless._
 
 trait MapReader[A] {
   type K
-  def read(map: Map[Symbol, Any]): A
+  def read(map: Map[String, Any]): A
 }
 
 object MapReader {
@@ -13,28 +13,28 @@ object MapReader {
   implicit def mrInt[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReader.Aux[Int, K0] =
     new MapReader[Int] {
       type K = K0
-      def read(map: Map[Symbol, Any]): Int =
-        map(wk.value).asInstanceOf[Int]
+      def read(map: Map[String, Any]): Int =
+        map(wk.value.name).asInstanceOf[Int]
     }
 
   implicit def mrString[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReader.Aux[String, K0] =
     new MapReader[String] {
       type K = K0
-      def read(map: Map[Symbol, Any]): String =
-        map(wk.value).asInstanceOf[String]
+      def read(map: Map[String, Any]): String =
+        map(wk.value.name).asInstanceOf[String]
     }
 
   implicit def mrBoolean[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReader.Aux[Boolean, K0] =
     new MapReader[Boolean] {
       type K = K0
-      def read(map: Map[Symbol, Any]): Boolean =
-        map(wk.value).asInstanceOf[Boolean]
+      def read(map: Map[String, Any]): Boolean =
+        map(wk.value.name).asInstanceOf[Boolean]
     }
 
   implicit val mrHNil: MapReader.Aux[HNil, HNil] =
     new MapReader[HNil] {
       type K = HNil
-      def read(map: Map[Symbol, Any]): HNil = HNil
+      def read(map: Map[String, Any]): HNil = HNil
     }
 
   implicit def mrHCons[K0, J <: HList, H, T <: HList](implicit
@@ -43,7 +43,7 @@ object MapReader {
   ): MapReader.Aux[H :: T, K0 :: J] =
     new MapReader[H :: T] {
       type K = K0 :: J
-      def read(map: Map[Symbol, Any]): H :: T =
+      def read(map: Map[String, Any]): H :: T =
         mrH.read(map) :: mrT.read(map)
     }
 
@@ -54,7 +54,7 @@ object MapReader {
   ): MapReader.Aux[A, K0] =
     new MapReader[A] {
       type K = K0
-      def read(map: Map[Symbol, Any]): A =
+      def read(map: Map[String, Any]): A =
         gen.from(mr.read(map))
     }
 }
@@ -65,5 +65,5 @@ object MapReaderExample extends App {
 
   val mrFoo = implicitly[MapReader[Foo]]
 
-  println(mrFoo.read(Map('i → 1, 's → "foo", 'b → true)))
+  println(mrFoo.read(Map("i" → 1, "s" → "foo", "b" → true)))
 }
