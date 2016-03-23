@@ -94,3 +94,20 @@ object MapReaderWriterExample extends App {
   assert(LabelReader.label(fooWithSome) == "Foo")
   assert(LabelReader.label(ccWithLabel) == "my custom label")
 }
+
+object ReflectionApp extends App {
+  import scala.reflect.runtime.universe
+  import scala.reflect.runtime.currentMirror
+
+  case class Foo(myValue: Int) extends AnyVal
+  val foo = Foo(42)
+
+  val tpe = universe.typeOf[Foo]
+  val members = tpe.members
+  val myValue: universe.TermSymbol = members.filter(_.name.toString == "myValue").head.asInstanceOf[universe.TermSymbol]
+  println(myValue)
+
+  val im = currentMirror.reflect(foo)
+  val fieldMirror = im.reflectField(myValue)
+  println(fieldMirror.get) //42
+}
