@@ -8,6 +8,17 @@ trait MapReaderWriter[A] {
   def write(a: A): Map[String, Any]
 }
 
+trait WithLabel {
+  def label(): String
+}
+
+object LabelReader {
+  def label(a: Any): String = a match {
+    case a: WithLabel => a.label
+    case other => other.getClass.getSimpleName
+  }
+}
+
 object MapReaderWriter {
   type Aux[A, K0] = MapReaderWriter[A] { type K = K0 }
 
@@ -72,4 +83,14 @@ object MapReaderWriterExample extends App {
     println(foo + " <==> " + fooMap)
     assert(mrFoo.read(fooMap) == foo)
   }
+
+  case class CCWithLabel(i: Int) extends WithLabel {
+    def label = "my custom label"
+  }
+
+  val ccWithLabel = CCWithLabel(1)
+  println(LabelReader.label(fooWithSome))
+  println(LabelReader.label(ccWithLabel))
+  assert(LabelReader.label(fooWithSome) == "Foo")
+  assert(LabelReader.label(ccWithLabel) == "my custom label")
 }
