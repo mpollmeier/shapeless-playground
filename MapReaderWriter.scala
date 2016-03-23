@@ -35,6 +35,17 @@ object MapReaderWriter {
       def write(value: Boolean): Map[String, Any] = Map[String, Any](name → value)
     }
 
+  implicit def mrOption[B, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Option[B], K0] =
+    new MapReaderWriter[Option[B]] {
+      type K = K0
+      val name: String = wk.value.name
+      def read(map: Map[String, Any]): Option[B] = map.get(wk.value.name).asInstanceOf[Option[B]]
+      def write(value: Option[B]): Map[String, Any] = value match {
+        case Some(value) => Map[String, Any](name → value)
+        case None => Map.empty
+      }
+    }
+
   implicit val mrHNil: MapReaderWriter.Aux[HNil, HNil] =
     new MapReaderWriter[HNil] {
       type K = HNil
@@ -65,13 +76,14 @@ object MapReaderWriter {
 }
 
 object MapReaderWriterExample extends App {
-  case class Foo(i: Int, s: String, b: Boolean)
-
+  case class Foo(i: Int, s: String, b: Boolean, so: Option[String])
   val mrFoo = implicitly[MapReaderWriter[Foo]]
 
-  val foo = Foo(1, "bar", true)
-  val fooMap = Map("i" → 1, "s" → "bar", "b" → true)
-
-  assert(mrFoo.read(fooMap) == foo)
-  assert(mrFoo.write(foo) == fooMap)
+  val fooWithSome = Foo(1, "bar", true, Some("soValue"))
+  val fooWithNone = Foo(1, "bar", true, None)
+  Seq(fooWithSome, fooWithNone) foreach { foo =>
+    val fooMap = mrFoo.write(foo)
+    println(foo + " <==> " + fooMap)
+    assert(mrFoo.read(fooMap) == foo)
+  }
 }
