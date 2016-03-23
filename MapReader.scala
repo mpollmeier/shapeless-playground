@@ -2,13 +2,13 @@ import shapeless._
 
 // based on https://github.com/echojc/sdu16/blob/f5e33fe2bf08527c6663b976d85e727a5f0cae34/shapeless-gen/src/main/scala/MapReader.scala
 
-trait MapReader[T] {
+trait MapReader[A] {
   type K
-  def read(map: Map[Symbol, Any]): T
+  def read(map: Map[Symbol, Any]): A
 }
 
 object MapReader {
-  type Aux[T, K0] = MapReader[T] { type K = K0 }
+  type Aux[A, K0] = MapReader[A] { type K = K0 }
 
   implicit def mrInt[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReader.Aux[Int, K0] =
     new MapReader[Int] {
