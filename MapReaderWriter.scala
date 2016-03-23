@@ -70,18 +70,40 @@ object MapReaderWriter {
       def read(map: Map[String, Any]): A = gen.from(mr.read(map))
       def write(a: A): Map[String, Any] = mr.write(gen.to(a))
     }
+
+  // implicit def mrValueClass[B, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Option[B], K0] =
+  //   new MapReaderWriter[Option[B]] {
+  //     type K = K0
+  //     val name: String = wk.value.name
+  //     def read(map: Map[String, Any]): Option[B] = map.get(wk.value.name).asInstanceOf[Option[B]]
+  //     def write(value: Option[B]): Map[String, Any] = value match {
+  //       case Some(value) => Map[String, Any](name → value)
+  //       case None => Map.empty
+  //     }
+  //   }
+
 }
 
 object MapReaderWriterExample extends App {
-  case class Foo(i: Int, s: String, b: Boolean, so: Option[String])
+  case class Bar(wrappedValue: Int) extends AnyVal
+  implicit def mrBar[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Bar, K0] =
+    new MapReaderWriter[Bar] {
+      type K = K0
+      val name: String = wk.value.name
+      def read(map: Map[String, Any]): Bar = Bar(map(wk.value.name).asInstanceOf[Int])
+      def write(value: Bar): Map[String, Any] = Map[String, Any](name → value.wrappedValue)
+    }
+
+  case class Foo(i: Int, s: String, b: Boolean, so: Option[String], bar: Bar)
   val mrFoo = implicitly[MapReaderWriter[Foo]]
 
-  val fooWithSome = Foo(1, "bar", true, Some("soValue"))
-  val fooWithNone = Foo(1, "bar", true, None)
+  val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
+  val fooWithNone = Foo(1, "bar", true, None, Bar(42))
   Seq(fooWithSome, fooWithNone) foreach { foo =>
     val fooMap = mrFoo.write(foo)
     println(foo + " <==> " + fooMap)
     assert(mrFoo.read(fooMap) == foo)
+    assert(fooMap("bar") == 42, s"bar must be `42`, but was `${foo.bar}`")
   }
 
   case class CCWithLabel(i: Int) extends WithLabel {
