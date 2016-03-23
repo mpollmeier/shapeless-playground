@@ -76,11 +76,13 @@ object MapReaderWriter {
 }
 
 object MapReaderWriterExample extends App {
-  case class Foo(i: Int, s: String, b: Boolean, so: Option[String])
+  case class MyValueClass(value: Int) extends AnyVal
+
+  case class Foo(i: Int, s: String, b: Boolean, so: Option[String], vc: MyValueClass)
   val mrFoo = implicitly[MapReaderWriter[Foo]]
 
-  val fooWithSome = Foo(1, "bar", true, Some("soValue"))
-  val fooWithNone = Foo(1, "bar", true, None)
+  val fooWithSome = Foo(1, "bar", true, Some("soValue"), MyValueClass(42))
+  val fooWithNone = Foo(1, "bar", true, None, MyValueClass(42))
   Seq(fooWithSome, fooWithNone) foreach { foo =>
     val fooMap = mrFoo.write(foo)
     println(foo + " <==> " + fooMap)
