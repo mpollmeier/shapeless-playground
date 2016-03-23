@@ -11,29 +11,17 @@ trait MapReaderWriter[A] {
 object MapReaderWriter {
   type Aux[A, K0] = MapReaderWriter[A] { type K = K0 }
 
-  implicit def mrInt[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Int, K0] =
-    new MapReaderWriter[Int] {
+  def mrSimple[T, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[T, K0] =
+    new MapReaderWriter[T] {
       type K = K0
       val name: String = wk.value.name
-      def read(map: Map[String, Any]): Int = map(name).asInstanceOf[Int]
-      def write(value: Int): Map[String, Any] = Map[String, Any](name → value)
+      def read(map: Map[String, Any]): T = map(wk.value.name).asInstanceOf[T]
+      def write(value: T): Map[String, Any] = Map[String, Any](name → value)
     }
 
-  implicit def mrString[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[String, K0] =
-    new MapReaderWriter[String] {
-      type K = K0
-      val name: String = wk.value.name
-      def read(map: Map[String, Any]): String = map(wk.value.name).asInstanceOf[String]
-      def write(value: String): Map[String, Any] = Map[String, Any](name → value)
-    }
-
-  implicit def mrBoolean[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Boolean, K0] =
-    new MapReaderWriter[Boolean] {
-      type K = K0
-      val name: String = wk.value.name
-      def read(map: Map[String, Any]): Boolean = map(wk.value.name).asInstanceOf[Boolean]
-      def write(value: Boolean): Map[String, Any] = Map[String, Any](name → value)
-    }
+  implicit def mrInt[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Int, K0] = mrSimple[Int, K0]
+  implicit def mrString[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[String, K0] = mrSimple[String, K0]
+  implicit def mrBoolean[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Boolean, K0] = mrSimple[Boolean, K0]
 
   implicit def mrOption[B, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Option[B], K0] =
     new MapReaderWriter[Option[B]] {
