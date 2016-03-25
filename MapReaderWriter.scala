@@ -1,4 +1,6 @@
 import shapeless._
+import scala.reflect.ClassTag
+import scala.reflect.runtime.{ currentMirror, universe => ru }
 
 // based on https://github.com/echojc/sdu16/blob/f5e33fe2bf08527c6663b976d85e727a5f0cae34/shapeless-gen/src/main/scala/MapReader.scala
 
@@ -24,7 +26,6 @@ object MapReaderWriter {
 
   def mrSimple[T, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[T, K0] =
     new MapReaderWriter[T] {
-      println(s"instantiating mrSimple for ${wk.value.name}")
       type K = K0
       val name: String = wk.value.name
       def read(map: Map[String, Any]): T = map(wk.value.name).asInstanceOf[T]
@@ -67,26 +68,24 @@ object MapReaderWriter {
     gen: Generic.Aux[A, L],
     mr: MapReaderWriter.Aux[L, K0]): MapReaderWriter.Aux[A, K0] =
     new MapReaderWriter[A] {
-      println("instantiating mrCaseClass")
       type K = K0
       def read(map: Map[String, Any]): A = gen.from(mr.read(map))
       def write(a: A): Map[String, Any] = mr.write(gen.to(a))
     }
 
-  import scala.reflect.runtime.universe
-  import scala.reflect.runtime.currentMirror
-  implicit def mrValueClass[K0 <: Symbol, VC <: AnyVal: universe.TypeTag : scala.reflect.ClassTag](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
+  implicit def mrValueClass[K0 <: Symbol, VC <: AnyVal :ru.TypeTag :ClassTag](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
     new MapReaderWriter[VC] {
-      println("instantiating mrValueClass")
       type K = K0
+      val tpe = ru.typeOf[VC]
       val name: String = wk.value.name
       def read(map: Map[String, Any]): VC = {
-        // Bar(map(wk.value.name).asInstanceOf[Int]).asInstanceOf[VC]
-        ???
+        val valueClass = tpe.typeSymbol.asClass
+        val ctor = tpe.decl(ru.termNames.CONSTRUCTOR).asMethod
+        val ctorm = currentMirror.reflectClass(valueClass).reflectConstructor(ctor)
+        ctorm(map(wk.value.name)).asInstanceOf[VC]
       }
 
       def write(value: VC): Map[String, Any] = {
-        val tpe = universe.typeOf[VC]
         val wrappedValues = tpe.members.filter(_.asTerm.isVal)
         assert(wrappedValues.size == 1, s"a value class must have exactly one member val, but ${value.getClass} has ${wrappedValues.size}")
         val underlyingField = wrappedValues.head.asTerm
@@ -96,27 +95,10 @@ object MapReaderWriter {
     }
 }
 
-// TODO: organise imports, rename universe to ru, clean up type classes
-// TODO: remove printlns
-
 object MapReaderWriterExample extends App {
   case class Bar(wrappedValue: Int) extends AnyVal
-  // implicit def mrBar[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Bar, K0] =
-  //   new MapReaderWriter[Bar] {
-  //     println("instantiating mrBar")
-  //     type K = K0
-  //     val name: String = wk.value.name
-  //     def read(map: Map[String, Any]): Bar = Bar(map(wk.value.name).asInstanceOf[Int])
-  //     def write(value: Bar): Map[String, Any] = Map[String, Any](name → value.wrappedValue)
-  //   }
-
   case class Foo(i: Int, s: String, b: Boolean, so: Option[String], bar: Bar)
   val mrFoo = implicitly[MapReaderWriter[Foo]]
-
-  // TODO: remove
-  // val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
-  // println(mrFoo.write(fooWithSome))
-
 
   val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
   val fooWithNone = Foo(1, "bar", true, None, Bar(42))
@@ -127,25 +109,22 @@ object MapReaderWriterExample extends App {
     assert(fooMap("bar") == 42, s"bar must be `42`, but was `${foo.bar}`")
   }
 
-  // case class CCWithLabel(i: Int) extends WithLabel {
-  //   def label = "my custom label"
-  // }
+  case class CCWithLabel(i: Int) extends WithLabel {
+    def label = "my custom label"
+  }
 
-  // val ccWithLabel = CCWithLabel(1)
-  // println(LabelReader.label(fooWithSome))
-  // println(LabelReader.label(ccWithLabel))
-  // assert(LabelReader.label(fooWithSome) == "Foo")
-  // assert(LabelReader.label(ccWithLabel) == "my custom label")
+  val ccWithLabel = CCWithLabel(1)
+  println(LabelReader.label(fooWithSome))
+  println(LabelReader.label(ccWithLabel))
+  assert(LabelReader.label(fooWithSome) == "Foo")
+  assert(LabelReader.label(ccWithLabel) == "my custom label")
 }
 
 object ReflectionGetValueApp extends App {
-  import scala.reflect.runtime.universe
-  import scala.reflect.runtime.currentMirror
-
   case class Foo(myValue: Int) extends AnyVal
   val foo = Foo(42)
 
-  val tpe = universe.typeOf[Foo]
+  val tpe = ru.typeOf[Foo]
   val wrappedValues = tpe.members.filter(_.asTerm.isVal)
   assert(wrappedValues.size == 1, s"a value class must have exactly one member val, but $foo has ${wrappedValues.size}")
   val underlyingField = wrappedValues.head.asTerm
@@ -155,15 +134,12 @@ object ReflectionGetValueApp extends App {
 }
 
 object ReflectionCallConstrApp extends App {
-  import scala.reflect.runtime.universe
-  import scala.reflect.runtime.currentMirror
-
   case class Foo(myValue: Int) extends AnyVal
   val foo = Foo(42)
 
-  val tpe = universe.typeOf[Foo]
+  val tpe = ru.typeOf[Foo]
   val valueClass = tpe.typeSymbol.asClass
-  val ctor = tpe.decl(universe.termNames.CONSTRUCTOR).asMethod
+  val ctor = tpe.decl(ru.termNames.CONSTRUCTOR).asMethod
   val ctorm = currentMirror.reflectClass(valueClass).reflectConstructor(ctor)
   val p = ctorm(foo.myValue)
   println(p)
