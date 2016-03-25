@@ -86,12 +86,20 @@ object MapReaderWriter {
 
 object MapReaderWriterExample extends App {
   case class Bar(wrappedValue: Int) extends AnyVal
-  implicit def mrBar[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Bar, K0] =
-    new MapReaderWriter[Bar] {
+  // implicit def mrBar[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Bar, K0] =
+  //   new MapReaderWriter[Bar] {
+  //     type K = K0
+  //     val name: String = wk.value.name
+  //     def read(map: Map[String, Any]): Bar = Bar(map(wk.value.name).asInstanceOf[Int])
+  //     def write(value: Bar): Map[String, Any] = Map[String, Any](name → value.wrappedValue)
+  //   }
+
+  implicit def mrValueClass[VC <: AnyVal, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
+    new MapReaderWriter[VC] {
       type K = K0
       val name: String = wk.value.name
-      def read(map: Map[String, Any]): Bar = Bar(map(wk.value.name).asInstanceOf[Int])
-      def write(value: Bar): Map[String, Any] = Map[String, Any](name → value.wrappedValue)
+      def read(map: Map[String, Any]): VC = ???//Bar(map(wk.value.name).asInstanceOf[Int])
+      def write(value: VC): Map[String, Any] = ???//Map[String, Any](name → value.wrappedValue)
     }
 
   case class Foo(i: Int, s: String, b: Boolean, so: Option[String], bar: Bar)
