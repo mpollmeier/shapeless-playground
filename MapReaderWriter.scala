@@ -103,11 +103,10 @@ object ReflectionApp extends App {
   val foo = Foo(42)
 
   val tpe = universe.typeOf[Foo]
-  val members = tpe.members
-  val myValue: universe.TermSymbol = members.filter(_.name.toString == "myValue").head.asInstanceOf[universe.TermSymbol]
-  println(myValue)
+  val wrappedValues = tpe.members.filter(_.asTerm.isVal)
+  assert(wrappedValues.size == 1, s"a value class must have exactly one member val, but $foo has ${wrappedValues.size}")
+  val underlyingField = wrappedValues.head.asTerm
 
-  val im = currentMirror.reflect(foo)
-  val fieldMirror = im.reflectField(myValue)
-  println(fieldMirror.get) //42
+  val underlyingValue = currentMirror.reflect(foo).reflectField(underlyingField).get
+  println(underlyingValue)
 }
