@@ -73,28 +73,28 @@ object MapReaderWriter {
       def write(a: A): Map[String, Any] = mr.write(gen.to(a))
     }
 
-  implicit def mrValueClass[VC <: AnyVal, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
+  import scala.reflect.runtime.universe
+  import scala.reflect.runtime.currentMirror
+  implicit def mrValueClass[K0 <: Symbol, VC <: AnyVal: universe.TypeTag : scala.reflect.ClassTag](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
     new MapReaderWriter[VC] {
-      // import MapReaderWriterExample.Bar
       println("instantiating mrValueClass")
       type K = K0
       val name: String = wk.value.name
       def read(map: Map[String, Any]): VC = {
-        // println(s"reading $map")
         // Bar(map(wk.value.name).asInstanceOf[Int]).asInstanceOf[VC]
         ???
       }
 
       def write(value: VC): Map[String, Any] = {
-        println(s"writing $value")
-        // Map[String, Any](name → value.asInstanceOf[Bar].wrappedValue)
-        ???
+        val tpe = universe.typeOf[VC]
+        val wrappedValues = tpe.members.filter(_.asTerm.isVal)
+        assert(wrappedValues.size == 1, s"a value class must have exactly one member val, but ${value.getClass} has ${wrappedValues.size}")
+        val underlyingField = wrappedValues.head.asTerm
+        val underlyingValue = currentMirror.reflect(value).reflectField(underlyingField).get
+        Map[String, Any](name → underlyingValue)
       }
     }
-
 }
-
-// TODO: remove printlns
 
 object MapReaderWriterExample extends App {
   case class Bar(wrappedValue: Int) extends AnyVal
