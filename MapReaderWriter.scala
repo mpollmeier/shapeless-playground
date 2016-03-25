@@ -96,6 +96,9 @@ object MapReaderWriter {
     }
 }
 
+// TODO: organise imports, rename universe to ru, clean up type classes
+// TODO: remove printlns
+
 object MapReaderWriterExample extends App {
   case class Bar(wrappedValue: Int) extends AnyVal
   // implicit def mrBar[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Bar, K0] =
@@ -111,18 +114,18 @@ object MapReaderWriterExample extends App {
   val mrFoo = implicitly[MapReaderWriter[Foo]]
 
   // TODO: remove
-  val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
-  println(mrFoo.write(fooWithSome))
-
-
   // val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
-  // val fooWithNone = Foo(1, "bar", true, None, Bar(42))
-  // Seq(fooWithSome, fooWithNone) foreach { foo =>
-  //   val fooMap = mrFoo.write(foo)
-  //   println(foo + " <==> " + fooMap)
-  //   assert(mrFoo.read(fooMap) == foo)
-  //   assert(fooMap("bar") == 42, s"bar must be `42`, but was `${foo.bar}`")
-  // }
+  // println(mrFoo.write(fooWithSome))
+
+
+  val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
+  val fooWithNone = Foo(1, "bar", true, None, Bar(42))
+  Seq(fooWithSome, fooWithNone) foreach { foo =>
+    val fooMap = mrFoo.write(foo)
+    println(foo + " <==> " + fooMap)
+    assert(mrFoo.read(fooMap) == foo)
+    assert(fooMap("bar") == 42, s"bar must be `42`, but was `${foo.bar}`")
+  }
 
   // case class CCWithLabel(i: Int) extends WithLabel {
   //   def label = "my custom label"
