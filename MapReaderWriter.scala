@@ -24,6 +24,7 @@ object MapReaderWriter {
 
   def mrSimple[T, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[T, K0] =
     new MapReaderWriter[T] {
+      println(s"instantiating mrSimple for ${wk.value.name}")
       type K = K0
       val name: String = wk.value.name
       def read(map: Map[String, Any]): T = map(wk.value.name).asInstanceOf[T]
@@ -66,63 +67,72 @@ object MapReaderWriter {
     gen: Generic.Aux[A, L],
     mr: MapReaderWriter.Aux[L, K0]): MapReaderWriter.Aux[A, K0] =
     new MapReaderWriter[A] {
+      println("instantiating mrCaseClass")
       type K = K0
       def read(map: Map[String, Any]): A = gen.from(mr.read(map))
       def write(a: A): Map[String, Any] = mr.write(gen.to(a))
     }
 
-  // implicit def mrValueClass[B, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Option[B], K0] =
-  //   new MapReaderWriter[Option[B]] {
-  //     type K = K0
-  //     val name: String = wk.value.name
-  //     def read(map: Map[String, Any]): Option[B] = map.get(wk.value.name).asInstanceOf[Option[B]]
-  //     def write(value: Option[B]): Map[String, Any] = value match {
-  //       case Some(value) => Map[String, Any](name → value)
-  //       case None => Map.empty
-  //     }
-  //   }
+  implicit def mrValueClass[VC <: AnyVal, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
+    new MapReaderWriter[VC] {
+      // import MapReaderWriterExample.Bar
+      println("instantiating mrValueClass")
+      type K = K0
+      val name: String = wk.value.name
+      def read(map: Map[String, Any]): VC = {
+        // println(s"reading $map")
+        // Bar(map(wk.value.name).asInstanceOf[Int]).asInstanceOf[VC]
+        ???
+      }
+
+      def write(value: VC): Map[String, Any] = {
+        println(s"writing $value")
+        // Map[String, Any](name → value.asInstanceOf[Bar].wrappedValue)
+        ???
+      }
+    }
 
 }
+
+// TODO: remove printlns
 
 object MapReaderWriterExample extends App {
   case class Bar(wrappedValue: Int) extends AnyVal
   // implicit def mrBar[K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Bar, K0] =
   //   new MapReaderWriter[Bar] {
+  //     println("instantiating mrBar")
   //     type K = K0
   //     val name: String = wk.value.name
   //     def read(map: Map[String, Any]): Bar = Bar(map(wk.value.name).asInstanceOf[Int])
   //     def write(value: Bar): Map[String, Any] = Map[String, Any](name → value.wrappedValue)
   //   }
 
-  implicit def mrValueClass[VC <: AnyVal, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
-    new MapReaderWriter[VC] {
-      type K = K0
-      val name: String = wk.value.name
-      def read(map: Map[String, Any]): VC = ???//Bar(map(wk.value.name).asInstanceOf[Int])
-      def write(value: VC): Map[String, Any] = ???//Map[String, Any](name → value.wrappedValue)
-    }
-
   case class Foo(i: Int, s: String, b: Boolean, so: Option[String], bar: Bar)
   val mrFoo = implicitly[MapReaderWriter[Foo]]
 
+  // TODO: remove
   val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
-  val fooWithNone = Foo(1, "bar", true, None, Bar(42))
-  Seq(fooWithSome, fooWithNone) foreach { foo =>
-    val fooMap = mrFoo.write(foo)
-    println(foo + " <==> " + fooMap)
-    assert(mrFoo.read(fooMap) == foo)
-    assert(fooMap("bar") == 42, s"bar must be `42`, but was `${foo.bar}`")
-  }
+  println(mrFoo.write(fooWithSome))
 
-  case class CCWithLabel(i: Int) extends WithLabel {
-    def label = "my custom label"
-  }
 
-  val ccWithLabel = CCWithLabel(1)
-  println(LabelReader.label(fooWithSome))
-  println(LabelReader.label(ccWithLabel))
-  assert(LabelReader.label(fooWithSome) == "Foo")
-  assert(LabelReader.label(ccWithLabel) == "my custom label")
+  // val fooWithSome = Foo(1, "bar", true, Some("soValue"), Bar(42))
+  // val fooWithNone = Foo(1, "bar", true, None, Bar(42))
+  // Seq(fooWithSome, fooWithNone) foreach { foo =>
+  //   val fooMap = mrFoo.write(foo)
+  //   println(foo + " <==> " + fooMap)
+  //   assert(mrFoo.read(fooMap) == foo)
+  //   assert(fooMap("bar") == 42, s"bar must be `42`, but was `${foo.bar}`")
+  // }
+
+  // case class CCWithLabel(i: Int) extends WithLabel {
+  //   def label = "my custom label"
+  // }
+
+  // val ccWithLabel = CCWithLabel(1)
+  // println(LabelReader.label(fooWithSome))
+  // println(LabelReader.label(ccWithLabel))
+  // assert(LabelReader.label(fooWithSome) == "Foo")
+  // assert(LabelReader.label(ccWithLabel) == "my custom label")
 }
 
 object ReflectionApp extends App {
