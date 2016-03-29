@@ -28,7 +28,7 @@ object MapReaderWriter {
   def mrSimple[T, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[T, K0] =
     new MapReaderWriter[T] {
       type K = K0
-      println("instantiating mrSimple")
+      // println("instantiating mrSimple")
       val name: String = wk.value.name
       def read(map: Map[String, Any]): T = map(wk.value.name).asInstanceOf[T]
       def write(value: T): Map[String, Any] = Map[String, Any](name → value)
@@ -41,7 +41,7 @@ object MapReaderWriter {
   implicit def mrOption[B, K0 <: Symbol](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[Option[B], K0] =
     new MapReaderWriter[Option[B]] {
       type K = K0
-      println("instantiating mrOption")
+      // println("instantiating mrOption")
       val name: String = wk.value.name
       def read(map: Map[String, Any]): Option[B] = map.get(wk.value.name).asInstanceOf[Option[B]]
       def write(value: Option[B]): Map[String, Any] = value match {
@@ -71,15 +71,15 @@ object MapReaderWriter {
     gen: Generic.Aux[A, L],
     mr: MapReaderWriter.Aux[L, K0]): MapReaderWriter.Aux[A, K0] =
     new MapReaderWriter[A] {
-      println("instantiating mrCaseClass")
+      // println("instantiating mrCaseClass")
       type K = K0
       def read(map: Map[String, Any]): A = gen.from(mr.read(map))
       def write(a: A): Map[String, Any] = mr.write(gen.to(a))
     }
 
-  implicit def mrValueClass[K0 <: Symbol, VC <: AnyVal: ru.TypeTag: ClassTag](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
+  implicit def mrValueClass[K0 <: Symbol, VC <: AnyVal: Generic: ru.TypeTag: ClassTag](implicit wk: Witness.Aux[K0]): MapReaderWriter.Aux[VC, K0] =
     new MapReaderWriter[VC] {
-      println("instantiating mrValueClass")
+      // println("instantiating mrValueClass")
       type K = K0
       val tpe = ru.typeOf[VC]
       val name: String = wk.value.name
@@ -114,18 +114,21 @@ object MapReaderWriterExample extends App {
     assert(ccMap("bar") == 42, s"bar must be `42`, but was `${cc.bar}`")
   }
 
-  case class CCWithLong(l: Long, l2: Long)
-  // TODO: should not compile because there's no implicit MRW for Long...
-  implicitly[MapReaderWriter[CCWithLong]]
-  // illTyped { """implicitly[MapReaderWriter[CCWithLong]]""" }
+  case class CCWithLong(i: Int, l: Long)
+  // should not compile because there is no implicit serialiser for Long
+  illTyped { """implicitly[MapReaderWriter[CCWithLong]]""" }
+
+  case class CCWithOptionalValueClass(i: Int, vc: MyValueClass)
+  val optionalVCMRW = implicitly[MapReaderWriter[CCWithOptionalValueClass]]
+  val optionalVC = CCWithOptionalValueClass(5, MyValueClass(42))
+  println(optionalVC + " <==> " + optionalVCMRW.write(optionalVC))
+  assert(optionalVCMRW.write(optionalVC) == Map("i" -> 5, "vc" -> 42))
+  assert(optionalVCMRW.read(Map("i" -> 5, "vc" -> 42)) == optionalVC)
 
   case class CCWithLabel(i: Int) extends WithLabel {
     def label = "my custom label"
   }
-
   val ccWithLabel = CCWithLabel(1)
-  println(LabelReader.label(ccWithSome))
-  println(LabelReader.label(ccWithLabel))
   assert(LabelReader.label(ccWithSome) == "CCWithAll")
   assert(LabelReader.label(ccWithLabel) == "my custom label")
 }
